@@ -2,7 +2,7 @@
 作者：@azyobuzin
 動作環境：Krile 2.2.1くらい
 
-YACQスクリプトを実行するKrile用プラグインです。
+YACQ(http://www.yacq.net/)スクリプトを実行するKrile用プラグインです。
 IPlugin.Loadedされたときにコンパイル・実行します。
 
 ★使い方
