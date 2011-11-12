@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Acuerdo.Plugin;
 using Inscribe.Storage;
 using XSpect.Yacq;
@@ -36,32 +37,37 @@ namespace YacqPlugin
 
         public void Loaded()
         {
-            try
+            Task.Factory.StartNew(() =>
             {
-                Directory.EnumerateFiles(
-                    Path.Combine(
-                        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-                        "yacq_lib"
-                    ),
-                    "*.yacq",
-                    SearchOption.TopDirectoryOnly
-                )
-                .Select(file => File.ReadAllText(file))
-                .ForEach(code =>
+                NotifyStorage.Notify("YACQスクリプトの読み込みを開始しました");
+                try
                 {
-                    try
+                    Directory.EnumerateFiles(
+                        Path.Combine(
+                            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                            "yacq_lib"
+                        ),
+                        "*.yacq",
+                        SearchOption.TopDirectoryOnly
+                    )
+                    .Select(file => File.ReadAllText(file))
+                    .ForEach(code =>
                     {
-                        YacqServices.ParseAll(new SymbolTable(), code)
-                            .Select(exp => Expression.Lambda(exp).Compile())
-                            .ForEach(dlg => dlg.DynamicInvoke());
-                    }
-                    catch (Exception ex)
-                    {
-                        ExceptionStorage.Register(ex, ExceptionCategory.PluginError);
-                    }
-                });
-            }
-            catch { }
+                        try
+                        {
+                            YacqServices.ParseAll(new SymbolTable(), code)
+                                .Select(exp => Expression.Lambda(exp).Compile())
+                                .ForEach(dlg => dlg.DynamicInvoke());
+                        }
+                        catch (Exception ex)
+                        {
+                            ExceptionStorage.Register(ex, ExceptionCategory.PluginError);
+                        }
+                    });
+                }
+                catch { }
+                NotifyStorage.Notify("YACQスクリプトの読み込みが完了しました");
+            });
         }
 
         public IConfigurator ConfigurationInterface
