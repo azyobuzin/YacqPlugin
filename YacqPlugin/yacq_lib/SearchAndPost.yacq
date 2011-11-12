@@ -9,7 +9,7 @@ ServiceDictionary.(Add "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?que
 
 PostOffice.UpdateInjection
 	.(Injection (\ [arg next last]
-		(arg.Item3.HasValue.cond(
+		(arg.Item3.HasValue.(cond
 			(\)
 			(\
 				ServiceDictionary
@@ -17,7 +17,7 @@ PostOffice.UpdateInjection
 						arg.Item2.(StartsWith (+ kvp.Key ":") StringComparison.InvariantCultureIgnoreCase)
 					))
 					.(let service
-						(String.(IsNullOrEmpty service.Value).cond(
+						(String.(IsNullOrEmpty service.Value).(cond
 							(\)
 							(\
 								Browser.(Start
@@ -28,5 +28,6 @@ PostOffice.UpdateInjection
 					)
 			)
 		))
+		
 		(next arg)
 	))
