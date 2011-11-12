@@ -51,7 +51,7 @@ namespace YacqPlugin
                 {
                     try
                     {
-                        YacqServices.ParseAll(code)
+                        YacqServices.ParseAll(new SymbolTable(), code)
                             .Select(exp => Expression.Lambda(exp).Compile())
                             .ForEach(dlg => dlg.DynamicInvoke());
                     }
