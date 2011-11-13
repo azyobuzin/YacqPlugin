@@ -2,30 +2,29 @@
 (load "cts:Inscribe.Common")
 (load "cts:Inscribe.Communication.Posting")
 
-(def ServiceDictionary Dictionary.[String String].(new))
-ServiceDictionary.(Add "Google" "http://www.google.com/search?hl=ja&q={0}")
-ServiceDictionary.(Add "Wikipedia" "http://ja.wikipedia.org/w/index.php?search={0}")
-ServiceDictionary.(Add "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?query={0}")
-
 PostOffice.UpdateInjection
 	.(Injection (\ [arg next last]
 		(arg.Item3.HasValue.(cond
 			(\)
 			(\
-				ServiceDictionary
-					.(FirstOrDefault (\ [kvp]
-						arg.Item2.(StartsWith (+ kvp.Key ":") StringComparison.InvariantCultureIgnoreCase)
-					))
-					.(let service
-						(String.(IsNullOrEmpty service.Value).(cond
-							(\)
-							(\
-								Browser.(Start
-									String.(Format service.Value Uri.(EscapeDataString arg.Item2.(Substring (+ service.Key.Length 1))))
-								)
+				[
+					Tuple.(Create "Google" "http://www.google.com/search?hl=ja&q={0}")
+					Tuple.(Create "Wikipedia" "http://ja.wikipedia.org/w/index.php?search={0}")
+					Tuple.(Create "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?query={0}")
+				]
+				.(FirstOrDefault (\ [t]
+					arg.Item2.(StartsWith (+ t.Item1 ":") StringComparison.InvariantCultureIgnoreCase)
+				))
+				.(let service
+					((== service nil).(cond
+						(\)
+						(\
+							Browser.(Start
+								String.(Format service.Item2 Uri.(EscapeDataString arg.Item2.(Substring (+ service.Item1.Length 1))))
 							)
-						))
-					)
+						)
+					))
+				)
 			)
 		))
 		
