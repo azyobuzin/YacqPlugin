@@ -1,0 +1,32 @@
+﻿(load "cts:System")
+(load "cts:Inscribe.Common")
+(load "cts:Inscribe.Communication.Posting")
+
+PostOffice.UpdateInjection
+	.(Injection (\ [arg next last]
+		(arg.Item3.HasValue.(cond
+			(\)
+			(\
+				[
+					Tuple.(Create "Google" "http://www.google.com/search?hl=ja&q={0}")
+					Tuple.(Create "Wikipedia" "http://ja.wikipedia.org/w/index.php?search={0}")
+					Tuple.(Create "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?query={0}")
+				]
+				.(FirstOrDefault (\ [t]
+					arg.Item2.(StartsWith (+ t.Item1 ":") StringComparison.InvariantCultureIgnoreCase)
+				))
+				.(let service
+					((== service nil).(cond
+						(\)
+						(\
+							Browser.(Start
+								String.(Format service.Item2 Uri.(EscapeDataString arg.Item2.(Substring (+ service.Item1.Length 1))))
+							)
+						)
+					))
+				)
+			)
+		))
+		
+		(next arg)
+	))
