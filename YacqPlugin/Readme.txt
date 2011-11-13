@@ -10,3 +10,19 @@ IPlugin.Loadedされたときにコンパイル・実行します。
 	2. pluginsフォルダに「yacq_lib」というフォルダを作って
 	   スクリプト（.yacqファイル）を投げ込みます
 	3. Krileを起動すれば動き出します
+
+★ShowMessageBoxSample.yacq
+	Krile起動時に「YACQ Plugin!!」とメッセージボックスを表示するだけの
+	サンプルスクリプトです。
+	うざいので削除することをお勧めします。
+
+★SearchAndPost.yacq
+	SearchAndPostPlugin(https://github.com/azyobuzin/SearchAndPostPlugin)
+	をYACQで作り直しました。
+	「Google:～」や「Wikipedia:～」などとツイートすると勝手にブラウザが起動します。
+	Google, Wikipedia, MSDNに対応していますがスクリプトを書き換えることで
+	好きな検索サービスを追加できます。
+
+今後の予定
+	・OfficialMediaUploadPlugin(https://github.com/azyobuzin/OfficialMediaUploadPlugin)
+	　をリメイク
