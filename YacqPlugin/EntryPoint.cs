@@ -2,12 +2,16 @@
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
 using Acuerdo.Plugin;
 using Inscribe.Storage;
+using Livet;
 using XSpect.Yacq;
+using Linq = System.Linq.Expressions;
 
 namespace YacqPlugin
 {
@@ -56,7 +60,7 @@ namespace YacqPlugin
                         try
                         {
                             YacqServices.ParseAll(new SymbolTable(), code)
-                                .Select(exp => Expression.Lambda(exp).Compile())
+                                .Select(exp => Linq.Expression.Lambda(exp).Compile())
                                 .ForEach(dlg => dlg.DynamicInvoke());
                         }
                         catch (Exception ex)
@@ -68,11 +72,62 @@ namespace YacqPlugin
                 catch { }
                 NotifyStorage.Notify("YACQスクリプトの読み込みが完了しました");
             });
+
+            Task.Factory.StartNew(() =>
+            {
+                while (true)
+                {
+                    Window w = null;
+                    DispatcherHelper.UIDispatcher.Invoke(
+                        new Action(() =>
+                            w = Application.Current.Windows
+                                .OfType<Mystique.Views.MainWindow>()
+                                .FirstOrDefault()
+                        ));
+
+                    if (w != null)
+                    {
+                        DispatcherHelper.BeginInvoke(() =>
+                        {
+                            var menu = new MenuItem();
+                            menu.Header = "YACQ コンソール...";
+                            menu.Click += (sender, e) => new ReplWindow() { Owner = w }.Show();
+
+                            w.Content.Conv<Grid>()
+                                .Children
+                                .OfType<Grid>()
+                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.PartBlocks.InputBlock.InputBlock>())
+                                .First()
+                                .Content.Conv<DockPanel>()
+                                .Children
+                                .OfType<Grid>()
+                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.Common.DropDownButton>())
+                                .First()
+                                .DropDownMenu
+                                .Items
+                                .Insert(6, menu);
+                        });
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+            });
         }
 
         public IConfigurator ConfigurationInterface
         {
             get { return null; }
+        }
+    }
+
+    static class Extension
+    {
+        public static T Conv<T>(this object source)
+        {
+            return (T)source;
         }
     }
 }
