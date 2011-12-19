@@ -58,6 +58,7 @@
     <Compile Include="EntryPoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReplWindow.cs" />
+    <Compile Include="Symbols.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystique\Acuerdo\Acuerdo.csproj">
