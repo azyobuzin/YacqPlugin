@@ -54,7 +54,8 @@ namespace YacqPlugin
                         "*.yacq",
                         SearchOption.TopDirectoryOnly
                     )
-                    .Select(file => File.ReadAllText(file))
+                    .Where(file => file != "rc.yacq")
+                    .Select(File.ReadAllText)
                     .ForEach(code =>
                     {
                         try
