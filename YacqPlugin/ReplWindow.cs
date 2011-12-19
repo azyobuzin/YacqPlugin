@@ -1,16 +1,21 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Mystique;
 using XSpect.Yacq;
-using Linq = System.Linq.Expressions;
+using XSpect.Yacq.Expressions;
 
 namespace YacqPlugin
 {
-    class ReplWindow : Window
+    partial class ReplWindow : Window
     {
         public ReplWindow()
         {
@@ -24,17 +29,32 @@ namespace YacqPlugin
             this.textBox.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             this.textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
             this.textBox.TextWrapping = TextWrapping.Wrap;
-            this.textBox.Text = "YACQ Console\r\n>>> ";
+            this.textBox.Text = string.Format("YACQ {0} on Krile {1}\r\n", YacqServices.Version, typeof(App).Assembly.GetName().Version);
             this.textBox.Select(this.textBox.Text.Length, 0);
             this.textBox.PreviewKeyDown += this.textBox_PreviewKeyDown;
+            this.symbolTable = new SymbolTable(typeof(Symbols))
+            {
+                {"*textbox*", YacqExpression.Constant(textBox)},
+            };
+            var rcPath = Path.Combine(
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                "yacq_lib\\rc.yacq"
+            );
+            if(File.Exists(rcPath))
+            {
+                YacqServices.ParseAll(this.symbolTable, File.ReadAllText(rcPath))
+                    .ForEach(e => YacqExpression.Lambda(e).Compile().DynamicInvoke());
+                this.textBox.AppendText("rc.yacq was loaded.\r\n");
+            }
+            this.textBox.AppendText(">>> ");
         }
 
-        private TextBox textBox = new TextBox();
+        private readonly TextBox textBox = new TextBox();
 
-        private LinkedList<string> history = new LinkedList<string>();
+        private readonly LinkedList<string> history = new LinkedList<string>();
         private LinkedListNode<string> historyPos = null;
 
-        private SymbolTable symbolTable = new SymbolTable();
+        private readonly SymbolTable symbolTable;
 
         private void textBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -86,13 +106,44 @@ namespace YacqPlugin
                         this.textBox.AppendText("\r\n");
                         try
                         {
-                            var exp = Linq.Expression.Lambda(
+                            var exp = YacqExpression.Lambda(
                                 YacqServices.Parse(this.symbolTable, code)
                             );
                             var ret = exp.Compile().DynamicInvoke();
                             if (ret == null)
                             {
                                 this.textBox.AppendText("null");
+                            }
+                            else if (ret is IEnumerable && !(ret is String))
+                            {
+                                var sb = new StringBuilder("[ ");
+                                var data = ((IEnumerable) ret)
+                                    .Cast<Object>()
+                                    .Select(_ => (_ ?? "(null)").ToString())
+                                    .Take(101)
+                                    .ToArray();
+                                if (data.Any(s => s.Length > 40))
+                                {
+                                    sb.Append("\n");
+                                    sb.Append(String.Join(
+                                        "\n",
+                                        data.Take(100)
+                                            .Select(s => "    " + s)
+                                    ));
+                                    sb.Append(data.Length > 100
+                                        ? "    (more...)\n]"
+                                        : "\n]"
+                                    );
+                                }
+                                else
+                                {
+                                    sb.Append(String.Join(" ", data.Take(100)));
+                                    sb.Append(data.Length > 100
+                                        ? " (more...) ]"
+                                        : " ]"
+                                    );
+                                }
+                                this.textBox.AppendText(sb.ToString());
                             }
                             else
                             {
@@ -101,7 +152,7 @@ namespace YacqPlugin
                         }
                         catch (Exception ex)
                         {
-                            this.textBox.AppendText(ex.GetType().Name + ":" + ex.ToString());
+                            this.textBox.AppendText(ex.GetType().Name + ":" + ex);
                         }
                     }
                     this.textBox.AppendText("\r\n>>> ");
@@ -109,15 +160,23 @@ namespace YacqPlugin
                     e.Handled = true;
                     break;
                 default:
-                    var inputStartPos = this.textBox.Text
-                        .Split('\n')
-                        .Select(s => s.Length + 1)
-                        .Reverse()
-                        .Skip(1)
-                        .Sum()
-                        + ">>> ".Length;
-                    if (this.textBox.SelectionStart < inputStartPos)
-                        this.textBox.Select(this.textBox.Text.Length, 0);
+                    if (
+                        e.KeyboardDevice.Modifiers == ModifierKeys.None ||
+                        e.KeyboardDevice.Modifiers == ModifierKeys.Shift ||
+                        e.KeyboardDevice.Modifiers == ModifierKeys.Control &&
+                            (e.Key == Key.V || e.Key == Key.X || e.Key == Key.Back || e.Key == Key.Delete)
+                    )
+                    {
+                        var inputStartPos = this.textBox.Text
+                            .Split('\n')
+                            .Select(s => s.Length + 1)
+                            .Reverse()
+                            .Skip(1)
+                            .Sum()
+                            + ">>> ".Length;
+                        if (this.textBox.SelectionStart < inputStartPos)
+                            this.textBox.Select(this.textBox.Text.Length, 0);
+                    }
                     break;
             }
         }
