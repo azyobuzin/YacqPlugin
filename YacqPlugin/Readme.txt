@@ -1,6 +1,6 @@
 ﻿YACQ Plugin
 作者：@azyobuzin
-動作環境：Krile 2.2.6くらい
+動作環境：Krile 2.3.5、2.3.7で動作確認
 
 YACQ(http://www.yacq.net/)スクリプトを実行するKrile用プラグインです。
 IPlugin.Loadedされたときにコンパイル・実行します。
@@ -14,6 +14,8 @@ IPlugin.Loadedされたときにコンパイル・実行します。
 ★コンソール
 	Krileの右上のメニューから[YACQ コンソール]をクリックすると
 	その場でスクリプトを実行できます。
+
+	rc.yacqファイルを用意するとコンソール起動時に発動します。
 
 ★ShowMessageBoxSample.yacq
 	Krile起動時に「YACQ Plugin!!」とメッセージボックスを表示するだけの
