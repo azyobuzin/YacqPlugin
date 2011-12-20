@@ -1,5 +1,6 @@
 ﻿YACQ Plugin
 作者：@azyobuzin
+Special Thanks：@takeshik
 動作環境：Krile 2.3.5、2.3.7で動作確認
 
 YACQ(http://www.yacq.net/)スクリプトを実行するKrile用プラグインです。
