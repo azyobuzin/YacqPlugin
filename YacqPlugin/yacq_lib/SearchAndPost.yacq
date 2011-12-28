@@ -4,29 +4,23 @@
 
 PostOffice.UpdateInjection
 	.(Injection (\ [arg next last]
-		(arg.Item3.HasValue.(cond
-			(\)
-			(\
-				[
-					(tuple "Google" "http://www.google.com/search?hl=ja&q={0}")
-					(tuple "Wikipedia" "http://ja.wikipedia.org/w/index.php?search={0}")
-					(tuple "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?query={0}")
-				]
-				.(FirstOrDefault (\ [t]
-					arg.Item2.(StartsWith (+ t.Item1 ":") StringComparison.InvariantCultureIgnoreCase)
-				))
-				.(let service
-					((!? service).(cond
-						(\)
-						(\
-							Browser.(Start
-								String.(Format service.Item2 Uri.(EscapeDataString arg.Item2.(Substring (+ service.Item1.Length 1))))
-							)
-						)
-					))
+		arg.Item3.HasValue.(else
+			[
+				(tuple "Google" "http://www.google.com/search?hl=ja&q={0}")
+				(tuple "Wikipedia" "http://ja.wikipedia.org/w/index.php?search={0}")
+				(tuple "MSDN" "http://social.msdn.microsoft.com/Search/ja-JP?query={0}")
+			]
+			.(FirstOrDefault (\ [t]
+				arg.Item2.(StartsWith (+ t.Item1 ":") StringComparison.InvariantCultureIgnoreCase)
+			))
+			.(let service
+				(? service).(then
+					Browser.(Start
+						String.(Format service.Item2 Uri.(EscapeDataString arg.Item2.(Substring (+ service.Item1.Length 1))))
+					)
 				)
 			)
-		))
+		)
 		
 		(next arg)
 	))
