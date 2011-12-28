@@ -56,7 +56,7 @@ UploaderManager.(RegisterUploader
 				PostOffice.UpdateInjection.(Injection
 					(\ [arg next last]
 						(!= arg.Item2.(Trim) self.lastComment).(if
-							(next)
+							(next arg)
 							Http.(CreateRequest (Uri self.apiUrl) "POST" "multipart/form-data").(let req
 								(= req.Timeout 30 * 1000)
 								
