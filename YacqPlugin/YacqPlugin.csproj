@@ -81,6 +81,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="yacq_lib\OfficialMediaUpload.yacq">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="yacq_lib\SearchAndPost.yacq">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -1,0 +1,123 @@
+﻿(load "cts:System.Reflection")
+(load "cts:System.Runtime.Serialization.Json")
+(load "cts:System.Xml")
+(load "cts:System.Xml.Linq")
+(load "cts:Acuerdo.External.Uploader")
+(load "cts:Acuerdo.Injection")
+(load "cts:Dulcet.Network")
+(load "cts:Dulcet.Twitter")
+(load "cts:Dulcet.Twitter.Credential")
+(load "cts:Inscribe.Communication.Posting")
+(load "cts:Inscribe.Plugin")
+(load "cts:Inscribe.Storage")
+
+UploaderManager.(RegisterUploader
+	(newtype OfficialMediaUploader:[Object IUploader]
+		(public method new [] (\ [self]
+			TweetStorage.TweetStorageChanged
+				.(Select (\ [e] e.EventArgs))
+				.(Subscribe (\ [e]
+					($
+						(&& (== e.ActionKind TweetActionKind.Added) (? e.Tweet)).(then
+							e.Tweet.Status.Entities.(GetChildNode "media").(let media
+								(? media).(then
+									EnumerableEx.(ForEach media.Children.(OfType.[TwitterEntityNode]) (\ [entity]
+										self.imageUrlDic.(Add
+											entity.(GetChildValue "expanded_url").Value
+											entity.(GetChildValue "media_url").Value
+										)
+									))
+								)
+							)
+						)
+					)
+					.(catch)
+				))
+		))
+		
+		(public member ServiceName:String get (\ [self] "pic.twitter.com"))
+		
+		(public member imageUrlDic:Dictionary.[String String] (Dictionary.[String String]))
+		
+		(public initonly member apiUrl:String "https://upload.twitter.com/1/statuses/update_with_media.json")
+		
+		(public member lastCredential:OAuth)
+		(public member lastPath:String)
+		(public member lastComment:String)
+		
+		(public member initializedInjection:Boolean false)
+		
+		(public method UploadImage:String [OAuth String String] (\ [self credential path comment]
+			(= self.lastCredential credential)
+			(= self.lastPath path)
+			(= self.lastComment comment.(Trim))
+			
+			self.initializedInjection.(else
+				PostOffice.UpdateInjection.(Injection
+					(\ [arg next last]
+						(!= arg.Item2.(Trim) self.lastComment).(if
+							(next)
+							Http.(CreateRequest (Uri self.apiUrl) "POST" "multipart/form-data").(let req
+								(= req.Timeout 30 * 1000)
+								
+								req.Headers.(Add "Authorization" (+ "OAuth "
+									(typeof "Dulcet.Twitter.Credential.OAuth").(InvokeMember
+										"GetHeader"
+										(| BindingFlags.InvokeMethod BindingFlags.NonPublic BindingFlags.Instance)
+										nil
+										self.lastCredential
+										[self.apiUrl CredentialProvider.RequestMethod.POST nil nil false]
+									)
+									.(to String)
+								))
+								
+								(List.[SendData]).let(data
+									data.(Add (SendData "status" self.lastComment))
+									data.(Add (SendData "media[]" nil self.lastPath))
+									arg.Item3.HasValue.(then data.(Add (SendData "in_reply_to_status_id" arg.Item3.Value.(ToString))))
+									
+									Http.(WebUpload
+										req
+										data
+										Encoding.UTF8
+										(\ [s]
+											JsonReaderWriterFactory.(CreateJsonReader s XmlDictionaryReaderQuotas.Max).(use reader
+												TwitterStatus.(FromNode XElement.(Load reader))
+											)
+										)
+										nil
+									)
+									.(let res
+										(? res.ThrownException).(then res.ThrownException.(throw))
+										
+										TweetStorage.(Register res.Data)
+										NotifyStorage.(Notify (+ "ツイートしました:@" arg.Item1.ScreenName ": " res.Data.Text) nil)
+									)
+								)
+							)
+							.(finally
+								(= self.lastCredential nil)
+								(= self.lastComment nil)
+								(= self.lastPath nil)
+							)
+						)
+					)
+					InjectionMode.InjectionLast
+				)
+				
+				(= self.initializedInjection true)
+			)
+			
+			String.Empty
+		))
+		
+		(public method IsResolvable:Boolean [String] (\ [self url]
+			self.imageUrlDic.(ContainsKey url)
+		))
+		
+		(public method Resolve:String [String] (\ [self url]
+			self.imageUrlDic.[url]
+		))
+	)
+	.(new)
+)
