@@ -6,8 +6,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using Acuerdo.Plugin;
+using Inscribe.Core;
 using Inscribe.Storage;
 using Livet;
 using XSpect.Yacq;
@@ -83,7 +83,7 @@ namespace YacqPlugin
 
             Task.Factory.StartNew(() =>
             {
-                while (true)
+                while (true) //Windowが作成されるまで待たないとAddMenuでNullReferenceException吐かれる
                 {
                     Window w = null;
                     DispatcherHelper.UIDispatcher.Invoke(
@@ -95,26 +95,7 @@ namespace YacqPlugin
 
                     if (w != null)
                     {
-                        DispatcherHelper.BeginInvoke(() =>
-                        {
-                            var menu = new MenuItem();
-                            menu.Header = "YACQ コンソール...";
-                            menu.Click += (sender, e) => new ReplWindow() { Owner = w }.Show();
-
-                            w.Content.Conv<Grid>()
-                                .Children
-                                .OfType<Grid>()
-                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.PartBlocks.InputBlock.InputBlock>())
-                                .First()
-                                .Content.Conv<DockPanel>()
-                                .Children
-                                .OfType<Grid>()
-                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.Common.DropDownButton>())
-                                .First()
-                                .DropDownMenu
-                                .Items
-                                .Insert(6, menu);
-                        });
+                        KernelService.AddMenu("YACQ コンソール", () => new ReplWindow() { Owner = w }.Show());
                         break;
                     }
                     else
