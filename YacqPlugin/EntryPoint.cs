@@ -39,6 +39,26 @@ namespace YacqPlugin
             }
         }
 
+        private void RunCode(string file)
+        {
+            try
+            {
+                YacqServices.ParseAll(new SymbolTable(), File.ReadAllText(file))
+                    .Select(exp => Linq.Expression.Lambda(exp).Compile())
+                    .ToArray() //全部コンパイルしてから
+                    .ForEach(dlg => dlg.DynamicInvoke());
+            }
+            catch (Exception ex)
+            {
+                ExceptionStorage.Register(
+                    ex,
+                    ExceptionCategory.PluginError,
+                    string.Format("{0} の実行に失敗しました: {1}", Path.GetFileName(file), ex.Message),
+                    () => this.RunCode(file)
+                );
+            }
+        }
+
         public void Loaded()
         {
             Task.Factory.StartNew(() =>
@@ -55,20 +75,7 @@ namespace YacqPlugin
                         SearchOption.TopDirectoryOnly
                     )
                     .Where(file => !file.EndsWith("\\rc.yacq"))
-                    .Select(File.ReadAllText)
-                    .ForEach(code =>
-                    {
-                        try
-                        {
-                            YacqServices.ParseAll(new SymbolTable(), code)
-                                .Select(exp => Linq.Expression.Lambda(exp).Compile())
-                                .ForEach(dlg => dlg.DynamicInvoke());
-                        }
-                        catch (Exception ex)
-                        {
-                            ExceptionStorage.Register(ex, ExceptionCategory.PluginError);
-                        }
-                    });
+                    .ForEach(this.RunCode);
                 }
                 catch { }
                 NotifyStorage.Notify("YACQスクリプトの読み込みが完了しました");
