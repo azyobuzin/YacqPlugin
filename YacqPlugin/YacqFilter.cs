@@ -17,7 +17,9 @@ namespace YacqPlugin
     {
         private Lazy<Func<TwitterStatusBase, bool>> _compiled;
 
-        private String _query;
+        private bool _failed;
+
+        private string _query;
 
         public override bool IsOnlyTranscender
         {
@@ -29,7 +31,19 @@ namespace YacqPlugin
 
         protected override bool FilterStatus(TwitterStatusBase status)
         {
-            return this._compiled.Value(status);
+            if (this._failed)
+            {
+                return false;
+            }
+            try
+            {
+                return this._compiled.Value(status);
+            }
+            catch
+            {
+                this._failed = true;
+                throw;
+            }
         }
 
         public override string Identifier
@@ -79,10 +93,18 @@ namespace YacqPlugin
                     return;
                 }
                 this._query = value;
-                this._compiled = new Lazy<Func<TwitterStatusBase, bool>>(() =>
-                    YacqServices.ParseFunc<TwitterStatusBase, bool>(new SymbolTable(typeof(Symbols)), this.Query).Compile(),
-                    true
-                );
+                try
+                {
+                    this._compiled = new Lazy<Func<TwitterStatusBase, bool>>(() =>
+                        YacqServices.ParseFunc<TwitterStatusBase, bool>(new SymbolTable(typeof(Symbols)), this.Query).Compile(),
+                        true
+                    );
+                }
+                catch
+                {
+                    this._failed = true;
+                    throw;
+                }
                 RaiseRequireReaccept();
             }
         }
