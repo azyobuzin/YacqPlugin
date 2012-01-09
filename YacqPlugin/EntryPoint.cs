@@ -2,16 +2,16 @@
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using Acuerdo.Plugin;
 using Inscribe.Core;
 using Inscribe.Storage;
 using Livet;
+using Mystique.Views;
 using XSpect.Yacq;
-using Linq = System.Linq.Expressions;
 
 namespace YacqPlugin
 {
@@ -44,7 +44,7 @@ namespace YacqPlugin
             try
             {
                 YacqServices.ParseAll(new SymbolTable(), File.ReadAllText(file))
-                    .Select(exp => Linq.Expression.Lambda(exp).Compile())
+                    .Select(exp => Expression.Lambda(exp).Compile())
                     .ToArray() //全部コンパイルしてから
                     .ForEach(dlg => dlg.DynamicInvoke());
             }
@@ -85,11 +85,11 @@ namespace YacqPlugin
             {
                 while (true) //Windowが作成されるまで待たないとAddMenuでNullReferenceException吐かれる
                 {
-                    Window w = null;
+                    MainWindow w = null;
                     DispatcherHelper.UIDispatcher.Invoke(
                         new Action(() =>
-                            w = Application.Current.Windows
-                                .OfType<Mystique.Views.MainWindow>()
+                            w = System.Windows.Application.Current.Windows
+                                .OfType<MainWindow>()
                                 .FirstOrDefault()
                         ));
 
@@ -109,14 +109,6 @@ namespace YacqPlugin
         public IConfigurator ConfigurationInterface
         {
             get { return null; }
-        }
-    }
-
-    static class Extension
-    {
-        public static T Conv<T>(this object source)
-        {
-            return (T)source;
         }
     }
 }
