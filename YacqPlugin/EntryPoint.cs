@@ -2,16 +2,16 @@
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
 using Acuerdo.Plugin;
+using Inscribe.Core;
 using Inscribe.Storage;
 using Livet;
+using Mystique.Views;
 using XSpect.Yacq;
-using Linq = System.Linq.Expressions;
 
 namespace YacqPlugin
 {
@@ -39,6 +39,26 @@ namespace YacqPlugin
             }
         }
 
+        private void RunCode(string file)
+        {
+            try
+            {
+                YacqServices.ParseAll(new SymbolTable(), File.ReadAllText(file))
+                    .Select(exp => Expression.Lambda(exp).Compile())
+                    .ToArray() //全部コンパイルしてから
+                    .ForEach(dlg => dlg.DynamicInvoke());
+            }
+            catch (Exception ex)
+            {
+                ExceptionStorage.Register(
+                    ex,
+                    ExceptionCategory.PluginError,
+                    string.Format("{0} の実行に失敗しました: {1}", Path.GetFileName(file), ex.Message),
+                    () => this.RunCode(file)
+                );
+            }
+        }
+
         public void Loaded()
         {
             Task.Factory.StartNew(() =>
@@ -55,20 +75,7 @@ namespace YacqPlugin
                         SearchOption.TopDirectoryOnly
                     )
                     .Where(file => !file.EndsWith("\\rc.yacq"))
-                    .Select(File.ReadAllText)
-                    .ForEach(code =>
-                    {
-                        try
-                        {
-                            YacqServices.ParseAll(new SymbolTable(), code)
-                                .Select(exp => Linq.Expression.Lambda(exp).Compile())
-                                .ForEach(dlg => dlg.DynamicInvoke());
-                        }
-                        catch (Exception ex)
-                        {
-                            ExceptionStorage.Register(ex, ExceptionCategory.PluginError);
-                        }
-                    });
+                    .ForEach(this.RunCode);
                 }
                 catch { }
                 NotifyStorage.Notify("YACQスクリプトの読み込みが完了しました");
@@ -76,38 +83,19 @@ namespace YacqPlugin
 
             Task.Factory.StartNew(() =>
             {
-                while (true)
+                while (true) //Windowが作成されるまで待たないとAddMenuでNullReferenceException吐かれる
                 {
-                    Window w = null;
+                    MainWindow w = null;
                     DispatcherHelper.UIDispatcher.Invoke(
                         new Action(() =>
-                            w = Application.Current.Windows
-                                .OfType<Mystique.Views.MainWindow>()
+                            w = System.Windows.Application.Current.Windows
+                                .OfType<MainWindow>()
                                 .FirstOrDefault()
                         ));
 
                     if (w != null)
                     {
-                        DispatcherHelper.BeginInvoke(() =>
-                        {
-                            var menu = new MenuItem();
-                            menu.Header = "YACQ コンソール...";
-                            menu.Click += (sender, e) => new ReplWindow() { Owner = w }.Show();
-
-                            w.Content.Conv<Grid>()
-                                .Children
-                                .OfType<Grid>()
-                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.PartBlocks.InputBlock.InputBlock>())
-                                .First()
-                                .Content.Conv<DockPanel>()
-                                .Children
-                                .OfType<Grid>()
-                                .SelectMany(grid => grid.Children.OfType<Mystique.Views.Common.DropDownButton>())
-                                .First()
-                                .DropDownMenu
-                                .Items
-                                .Insert(6, menu);
-                        });
+                        KernelService.AddMenu("YACQ コンソール", () => new ReplWindow() { Owner = w }.Show());
                         break;
                     }
                     else
@@ -121,14 +109,6 @@ namespace YacqPlugin
         public IConfigurator ConfigurationInterface
         {
             get { return null; }
-        }
-    }
-
-    static class Extension
-    {
-        public static T Conv<T>(this object source)
-        {
-            return (T)source;
         }
     }
 }
