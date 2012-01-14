@@ -1,4 +1,5 @@
-﻿(load "cts:System.Reflection")
+﻿(assembly "System.Runtime.Serialization")
+(load "cts:System.Reflection")
 (load "cts:System.Runtime.Serialization.Json")
 (load "cts:System.Xml")
 (load "cts:System.Xml.Linq")
@@ -13,31 +14,7 @@
 
 UploaderManager.(RegisterUploader
 	(newtype OfficialMediaUploader:[Object IUploader]
-		(public method new [] (\ [self]
-			TweetStorage.TweetStorageChanged
-				.(Select (\ [e] e.EventArgs))
-				.(Subscribe (\ [e]
-					($
-						(&& (== e.ActionKind TweetActionKind.Added) (? e.Tweet)).(then
-							e.Tweet.Status.Entities.(GetChildNode "media").(let media
-								(? media).(then
-									EnumerableEx.(ForEach media.Children.(OfType.[TwitterEntityNode]) (\ [entity]
-										self.imageUrlDic.(Add
-											entity.(GetChildValue "expanded_url").Value
-											entity.(GetChildValue "media_url").Value
-										)
-									))
-								)
-							)
-						)
-					)
-					.(catch)
-				))
-		))
-		
 		(public member ServiceName:String get (\ [self] "pic.twitter.com"))
-		
-		(public member imageUrlDic:Dictionary.[String String] (Dictionary.[String String]))
 		
 		(public initonly member apiUrl:String "https://upload.twitter.com/1/statuses/update_with_media.json")
 		
@@ -57,21 +34,32 @@ UploaderManager.(RegisterUploader
 					(\ [arg next last]
 						(!= arg.Item2.(Trim) self.lastComment).(if
 							(next arg)
-							Http.(CreateRequest (Uri self.apiUrl) "POST" "multipart/form-data").(let req
-								(= req.Timeout 30 * 1000)
+							Http.(CreateRequest (Uri self.apiUrl) "POST" "multipart/form-data" nil).(let req
+								(= req.Timeout (* 30 1000))
 								
 								req.Headers.(Add "Authorization" (+ "OAuth "
 									(typeof "Dulcet.Twitter.Credential.OAuth").(InvokeMember
 										"GetHeader"
-										(| BindingFlags.InvokeMethod BindingFlags.NonPublic BindingFlags.Instance)
+										(|
+											BindingFlags.InvokeMethod.(to Int32)
+											BindingFlags.NonPublic.(to Int32)
+											BindingFlags.Instance.(to Int32)
+										)
+										.(to BindingFlags)
 										nil
 										self.lastCredential
-										[self.apiUrl CredentialProvider.RequestMethod.POST nil nil false]
+										[
+											self.apiUrl
+											(type "Dulcet.Twitter.Credential.CredentialProvider+RequestMethod").POST
+											nil
+											nil
+											false
+										]
 									)
 									.(to String)
 								))
 								
-								(List.[SendData]).let(data
+								(List.[SendData]).(let data
 									data.(Add (SendData "status" self.lastComment))
 									data.(Add (SendData "media[]" nil self.lastPath))
 									arg.Item3.HasValue.(then data.(Add (SendData "in_reply_to_status_id" arg.Item3.Value.(ToString))))
@@ -111,13 +99,10 @@ UploaderManager.(RegisterUploader
 			String.Empty
 		))
 		
-		(public method IsResolvable:Boolean [String] (\ [self url]
-			self.imageUrlDic.(ContainsKey url)
-		))
+		(public method IsResolvable:Boolean [String] (\ [self url] false)) ;Krile本体で対応済み
 		
-		(public method Resolve:String [String] (\ [self url]
-			self.imageUrlDic.[url]
-		))
+		(public method Resolve:String [String] (\ [self url] nil))
 	)
 	.(new)
 )
+;*assembly*.(Save nil) 
