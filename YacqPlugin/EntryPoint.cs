@@ -30,12 +30,11 @@ namespace YacqPlugin
             }
         }
 
-        public double Version
+        public Version Version
         {
             get
             {
-                var version = Assembly.GetExecutingAssembly().GetName().Version;
-                return double.Parse(version.Major + "." + version.Minor);
+                return Assembly.GetExecutingAssembly().GetName().Version;
             }
         }
 
