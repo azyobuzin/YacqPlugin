@@ -4,13 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Acuerdo.Plugin;
 using Inscribe.Core;
 using Inscribe.Storage;
-using Livet;
-using Mystique.Views;
 using XSpect.Yacq;
 
 namespace YacqPlugin
@@ -80,29 +77,7 @@ namespace YacqPlugin
                 NotifyStorage.Notify("YACQスクリプトの読み込みが完了しました");
             });
 
-            Task.Factory.StartNew(() =>
-            {
-                while (true) //Windowが作成されるまで待たないとAddMenuでNullReferenceException吐かれる
-                {
-                    MainWindow w = null;
-                    DispatcherHelper.UIDispatcher.Invoke(
-                        new Action(() =>
-                            w = System.Windows.Application.Current.Windows
-                                .OfType<MainWindow>()
-                                .FirstOrDefault()
-                        ));
-
-                    if (w != null)
-                    {
-                        KernelService.AddMenu("YACQ コンソール", () => new ReplWindow() { Owner = w }.Show());
-                        break;
-                    }
-                    else
-                    {
-                        Thread.Sleep(100);
-                    }
-                }
-            });
+            KernelService.AddMenu("YACQ コンソール", () => new ReplWindow().Show());
         }
 
         public IConfigurator ConfigurationInterface

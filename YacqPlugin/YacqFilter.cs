@@ -21,7 +21,7 @@ namespace YacqPlugin
 
         private string _query;
 
-        public override bool IsOnlyTranscender
+        public override bool IsOnlyForTranscender
         {
             get
             {
